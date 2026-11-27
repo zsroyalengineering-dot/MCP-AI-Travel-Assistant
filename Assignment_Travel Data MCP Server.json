@@ -1,0 +1,279 @@
+{
+  "name": "Assignment_Travel Data MCP Server",
+  "nodes": [
+    {
+      "parameters": {
+        "path": "travel-assistant-tools-jalom01",
+        "instructions": "You have access to travel research tools: Geocode Location, Get Weather Forecast, Get Currency Exchange Rate, Find Tourist Attractions, Find Restaurants Near Location, and Find Hotels Near Location. Always call Geocode Location first to resolve latitude and longitude for a destination before calling any other tool that needs coordinates."
+      },
+      "id": "eb3250ea-b22e-436a-ac6d-f36b3465e18a",
+      "name": "Travel Tools MCP Server",
+      "type": "@n8n/n8n-nodes-langchain.mcpTrigger",
+      "typeVersion": 2.1,
+      "position": [
+        -304,
+        48
+      ],
+      "webhookId": "da5f6ea2-2e25-4732-a6fb-0e976f27b37b"
+    },
+    {
+      "parameters": {
+        "toolDescription": "Convert a destination name (city, town, or tourist spot) into latitude, longitude, country and timezone. ALWAYS call this first for any new destination before calling the weather, attractions, restaurants, or hotels tools.",
+        "url": "https://geocoding-api.open-meteo.com/v1/search",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "name",
+              "value": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('location', 'Destination name to geocode, e.g. \"Coxs Bazar, Bangladesh\"') }}"
+            },
+            {
+              "name": "count",
+              "value": "1"
+            },
+            {
+              "name": "language",
+              "value": "en"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "8f2550e9-7bce-41ec-8788-2bb3c4969f10",
+      "name": "Geocode Location",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        -560,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get the multi-day weather forecast (max/min temperature, rain chance, conditions) for a destination given its latitude and longitude from the Geocode Location tool.",
+        "url": "https://api.open-meteo.com/v1/forecast",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "latitude",
+              "value": "={{ $fromAI('latitude', 'Latitude of the destination, from the Geocode Location tool', 'number') }}"
+            },
+            {
+              "name": "longitude",
+              "value": "={{ $fromAI('longitude', 'Longitude of the destination, from the Geocode Location tool', 'number') }}"
+            },
+            {
+              "name": "daily",
+              "value": "temperature_2m_max,temperature_2m_min,precipitation_probability_max,weathercode"
+            },
+            {
+              "name": "timezone",
+              "value": "auto"
+            },
+            {
+              "name": "forecast_days",
+              "value": "={{ $fromAI('forecast_days', 'Integer number of days to forecast, between 1 and 16. Must be a whole number like 3, NOT a date word like tomorrow or this weekend.', 'number') }}"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "ca38fe8d-1554-4b24-bfbe-5a4888e3a6cf",
+      "name": "Get Weather Forecast",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        -432,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Get today's exchange rate from a base currency to 150+ other currencies (including BDT, INR, NPR, THB, etc). Provide only the BASE currency as a lowercase 3-letter ISO 4217 code (e.g. usd, bdt, eur) - never a currency name or symbol. The response is a JSON object where each key is a target currency's lowercase code and the value is how much of that currency equals 1 unit of the base currency - look up the specific target currency code you need in the response to get its rate.",
+        "url": "=https://cdn.jsdelivr.net/npm/@fawazahmed0/currency-api@latest/v1/currencies/{{ $fromAI('from_currency', 'Base currency as a lowercase 3-letter ISO 4217 code, e.g. usd, eur, bdt, gbp, jpy, thb, npr. Convert currency names or symbols yourself first (Taka -> bdt, Dollar -> usd, Euro -> eur, Pound -> gbp, Baht -> thb, Rupee -> inr or npr). Always lowercase.', 'string').toLowerCase() }}.json",
+        "options": {}
+      },
+      "id": "a8281ccb-d520-435a-b594-1b3c07ecf868",
+      "name": "Get Currency Exchange Rate",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        -304,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Find well-known tourist attractions and landmarks near a destination using Wikipedia geosearch. Provide coordinates as \"latitude|longitude\" from the Geocode Location tool.",
+        "url": "https://en.wikipedia.org/w/api.php",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "action",
+              "value": "query"
+            },
+            {
+              "name": "list",
+              "value": "geosearch"
+            },
+            {
+              "name": "gscoord",
+              "value": "={{ $fromAI('coordinates', 'Latitude and longitude joined by a pipe character, e.g. 21.4272|92.0058', 'string') }}"
+            },
+            {
+              "name": "gsradius",
+              "value": "={{ $fromAI('radius_m', 'Search radius in meters, integer, max 10000', 'number') }}"
+            },
+            {
+              "name": "gslimit",
+              "value": "10"
+            },
+            {
+              "name": "format",
+              "value": "json"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "d0264218-27cd-49d0-a421-6ea24778f747",
+      "name": "Find Tourist Attractions",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        -16,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Find restaurants near a destination using OpenStreetMap data. Provide latitude, longitude and a search radius in meters.",
+        "method": "POST",
+        "url": "https://overpass-api.de/api/interpreter",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "=[out:json][timeout:25];(node[\"amenity\"=\"restaurant\"](around:{{ $fromAI(\"radius_m\", \"Search radius in meters, e.g. 3000\", \"number\") }},{{ $fromAI(\"latitude\", \"Latitude of the destination\", \"number\") }},{{ $fromAI(\"longitude\", \"Longitude of the destination\", \"number\") }}););out center 15;",
+        "options": {}
+      },
+      "id": "c626a449-1e0d-4205-af77-0d60ae93d5e2",
+      "name": "Find Restaurants Near Location",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        160,
+        288
+      ]
+    },
+    {
+      "parameters": {
+        "toolDescription": "Find hotels, guesthouses, and hostels near a destination using OpenStreetMap data. Provide latitude, longitude and a search radius in meters.",
+        "method": "POST",
+        "url": "https://overpass-api.de/api/interpreter",
+        "sendBody": true,
+        "contentType": "raw",
+        "rawContentType": "text/plain",
+        "body": "=[out:json][timeout:25];(node[\"tourism\"~\"hotel|guest_house|hostel\"](around:{{ $fromAI(\"radius_m\", \"Search radius in meters, e.g. 5000\", \"number\") }},{{ $fromAI(\"latitude\", \"Latitude of the destination\", \"number\") }},{{ $fromAI(\"longitude\", \"Longitude of the destination\", \"number\") }}););out center 15;",
+        "options": {}
+      },
+      "id": "578ecb89-348d-4e41-8199-f25c13f32b7f",
+      "name": "Find Hotels Near Location",
+      "type": "n8n-nodes-base.httpRequestTool",
+      "typeVersion": 4.5,
+      "position": [
+        320,
+        272
+      ]
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Geocode Location": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Tools MCP Server",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Weather Forecast": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Tools MCP Server",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Currency Exchange Rate": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Tools MCP Server",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Tourist Attractions": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Tools MCP Server",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Restaurants Near Location": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Tools MCP Server",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find Hotels Near Location": {
+      "ai_tool": [
+        [
+          {
+            "node": "Travel Tools MCP Server",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "294b5dc8-2b3c-477c-bfa8-d2a6c7a15437",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "instanceId": "d3c6589735ea7863fbb2ad13eb73599b57de1fa7c3187fd9c6b65ed8306d221e"
+  },
+  "nodeGroups": [],
+  "id": "pxMcRJesvJ1ewGnQ",
+  "tags": []
+}

@@ -1,0 +1,282 @@
+{
+  "name": "MCP_AI Travel Assistant",
+  "nodes": [
+    {
+      "parameters": {
+        "public": true,
+        "options": {
+          "responseMode": "streaming"
+        }
+      },
+      "id": "a02e9218-2d9c-4339-aa43-840c52e941ab",
+      "name": "When Chat Message Received",
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.5,
+      "position": [
+        -1136,
+        16
+      ],
+      "webhookId": "122d04f6-4c47-420a-8d19-e21d628e0e2f"
+    },
+    {
+      "parameters": {
+        "operation": "get",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "GZyAwvJCAlmUhVDN"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sessionId",
+              "keyValue": "={{ $json.sessionId }}"
+            }
+          ]
+        },
+        "limit": 1
+      },
+      "id": "1c0d21d0-de5d-4964-b8db-d415b34c9256",
+      "name": "Get Saved Preferences",
+      "type": "n8n-nodes-base.dataTable",
+      "typeVersion": 1.1,
+      "position": [
+        -912,
+        16
+      ],
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User message: {{ $('When Chat Message Received').item.json.chatInput }}\n\nPreviously saved preferences for this user, as JSON (may be an empty object if none saved yet): {{ JSON.stringify($json) }}",
+        "options": {
+          "systemMessage": "You are an AI Travel Assistant helping travelers plan trips to destinations such as Cox's Bazar, Kathmandu, Sajek Valley, Bandarban, and elsewhere.\n\nYou have these tools:\n- Travel Data Tools (MCP): Geocode Location, Get Weather Forecast, Get Currency Exchange Rate, Find Tourist Attractions, Find Restaurants Near Location, Find Hotels Near Location.\n- Save Preferences: stores the user's travel preferences (budget, hotel type, transport, diet, activities) so future trips can be personalized automatically.\n\nFor every travel planning request:\n1. Call Geocode Location first to resolve latitude/longitude for the destination.\n2. Call Get Weather Forecast with those coordinates for the requested dates.\n3. Call Find Tourist Attractions, Find Restaurants Near Location, and Find Hotels Near Location with those coordinates.\n4. If the destination is outside Bangladesh, call Get Currency Exchange Rate (BDT to the local currency) to help estimate costs.\n5. If the user states a new preference (budget level, hotel type, transport, diet, or activity type), call Save Preferences to remember it.\n6. Always apply any previously saved preferences given to you in the prompt when making recommendations, without asking the user to repeat them, unless the new message overrides them.\n\nThen reply with a clear, friendly, well-organized recommendation covering: suggested dates, a short weather summary, hotel suggestions, places to visit, restaurant suggestions, estimated costs and currency notes (if international), packing tips based on the weather, and any other useful travel tips.",
+          "maxIterations": 15
+        }
+      },
+      "id": "78880524-aecf-4c33-bf8c-5315358bee91",
+      "name": "AI Travel Assistant Agent",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [
+        -560,
+        16
+      ]
+    },
+    {
+      "parameters": {
+        "contextWindowLength": 10
+      },
+      "id": "5f2cd896-654d-406c-a388-467e64fb4591",
+      "name": "Conversation Memory",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "typeVersion": 1.4,
+      "position": [
+        -544,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "endpointUrl": "https://alom-109a.app.n8n.cloud/mcp/travel-assistant-tools-jalom01",
+        "options": {}
+      },
+      "id": "db7af18d-a49a-4a56-b27d-885cde374fb4",
+      "name": "Travel Data Tools (MCP)",
+      "type": "@n8n/n8n-nodes-langchain.mcpClientTool",
+      "typeVersion": 1.4,
+      "position": [
+        -368,
+        240
+      ]
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "dataTableId": {
+          "__rl": true,
+          "mode": "id",
+          "value": "GZyAwvJCAlmUhVDN"
+        },
+        "filters": {
+          "conditions": [
+            {
+              "keyName": "sessionId",
+              "keyValue": "={{ $('When Chat Message Received').item.json.sessionId }}"
+            }
+          ]
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "sessionId": "={{ $('When Chat Message Received').item.json.sessionId }}",
+            "preferredBudget": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('preferredBudget', 'Budget preference: Budget, Mid-range, or Luxury. Leave blank if not mentioned in this message.') }}",
+            "hotelType": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('hotelType', 'Favorite hotel type: Hotel, Resort, Hostel, or Guesthouse. Leave blank if not mentioned in this message.') }}",
+            "preferredTransport": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('preferredTransport', 'Preferred transportation: Bus, Train, Car, or Flight. Leave blank if not mentioned in this message.') }}",
+            "dietaryPreference": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('dietaryPreference', 'Dietary preference: Vegetarian, Halal, or Other. Leave blank if not mentioned in this message.') }}",
+            "preferredActivities": "={{ /*n8n-auto-generated-fromAI-override*/ $fromAI('preferredActivities', 'Preferred activities: Adventure, Relaxation, Sightseeing, Nature, or Shopping. Leave blank if not mentioned in this message.') }}"
+          },
+          "schema": [
+            {
+              "id": "sessionId",
+              "displayName": "sessionId",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true
+            },
+            {
+              "id": "preferredBudget",
+              "displayName": "preferredBudget",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true
+            },
+            {
+              "id": "hotelType",
+              "displayName": "hotelType",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true
+            },
+            {
+              "id": "preferredTransport",
+              "displayName": "preferredTransport",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true
+            },
+            {
+              "id": "dietaryPreference",
+              "displayName": "dietaryPreference",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true
+            },
+            {
+              "id": "preferredActivities",
+              "displayName": "preferredActivities",
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "display": true
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "6e2aaec5-009d-48a2-afce-b70a3d49cdd0",
+      "name": "Save Preferences",
+      "type": "n8n-nodes-base.dataTableTool",
+      "typeVersion": 1.1,
+      "position": [
+        -208,
+        224
+      ]
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-3.6-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1.1,
+      "position": [
+        -704,
+        240
+      ],
+      "id": "7fa52c80-23cd-459f-93f6-8ffa2cf89b77",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "HQJQTkLuco0vOKVO",
+          "name": "Google Gemini(PaLM) Api account 2"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "When Chat Message Received": {
+      "main": [
+        [
+          {
+            "node": "Get Saved Preferences",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get Saved Preferences": {
+      "main": [
+        [
+          {
+            "node": "AI Travel Assistant Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Conversation Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "AI Travel Assistant Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Travel Data Tools (MCP)": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Travel Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save Preferences": {
+      "ai_tool": [
+        [
+          {
+            "node": "AI Travel Assistant Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Travel Assistant Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "binaryMode": "separate",
+    "availableInMCP": true
+  },
+  "versionId": "6da2d15d-b7db-4cc7-a9c2-1684b74eadd2",
+  "meta": {
+    "aiBuilderAssisted": true,
+    "builderVariant": "mcp",
+    "templateCredsSetupCompleted": true,
+    "instanceId": "d3c6589735ea7863fbb2ad13eb73599b57de1fa7c3187fd9c6b65ed8306d221e"
+  },
+  "nodeGroups": [],
+  "id": "cFqupgIoag5N3qq3",
+  "tags": []
+}
